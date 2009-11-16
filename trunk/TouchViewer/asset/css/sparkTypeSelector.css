@@ -1,0 +1,28 @@
+/**
+ *
+ * Touch Viewer
+ *
+ * @author Copyright (c) 2009 taiga.jp.
+ * @version 1.0
+ *
+ * Developed by taiga
+ * @see http://taiga.jp/
+ *
+ * Touch Viewer is (c) 2009 taiga.jp and is released under the MIT License:
+ * http://www.opensource.org/licenses/mit-license.php
+ *
+ */
+@namespace s "library://ns.adobe.com/flex/spark";
+s|Scroller {
+    horizontal-scroll-policy : off;
+    vertical-scroll-policy   : off;
+}
+s|Panel {
+    color            : #ffffff;
+    base-color       : #333333;
+    border-color     : #333333;
+    background-color : #333333;
+}
+s|Window {
+    background-color : #333333;
+}
