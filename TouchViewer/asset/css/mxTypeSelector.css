@@ -1,0 +1,20 @@
+/**
+ *
+ * Touch Viewer
+ *
+ * @author Copyright (c) 2009 taiga.jp.
+ * @version 1.0
+ *
+ * Developed by taiga
+ * @see http://taiga.jp/
+ *
+ * Touch Viewer is (c) 2009 taiga.jp and is released under the MIT License:
+ * http://www.opensource.org/licenses/mit-license.php
+ *
+ */
+@namespace mx "library://ns.adobe.com/flex/halo";
+mx|ToolTip {
+    color            : #ffffff;
+    background-color : #000000;
+    font-size        : 15;
+}

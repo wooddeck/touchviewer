@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<application xmlns="http://ns.adobe.com/air/application/2.0beta">
+
+    <id>TouchViewer</id>
+    <filename>TouchViewer</filename>
+    <name>TouchViewer</name>
+    <version>v1</version>
+    <!-- <description></description> -->
+
+    <copyright>taiga.jp</copyright>
+
+    <initialWindow>
+        <content>[この値は Flash Builder の出力ファイル app.xml に上書きされます。]</content>
+        <!-- <title></title> -->
+        <systemChrome>none</systemChrome>
+        <transparent>true</transparent>
+        <!-- <visible></visible> -->
+        <!-- <minimizable></minimizable> -->
+        <!-- <maximizable></maximizable> -->
+        <resizable>false</resizable>
+        <!-- <width></width> -->
+        <!-- <height></height> -->
+        <!-- <x></x> -->
+        <!-- <y></y> -->
+        <!-- <minSize></minSize> -->
+        <!-- The window's initial maximum size, specified as a width/height pair, such as "1600 1200". Optional. -->
+        <!-- <maxSize></maxSize> -->
+    </initialWindow>
+
+    <!-- <installFolder></installFolder> -->
+    <!-- <programMenuFolder></programMenuFolder> -->
+    <icon>
+        <image16x16>asset/icon/icon16.png</image16x16>
+        <image32x32>asset/icon/icon32.png</image32x32>
+        <image48x48>asset/icon/icon48.png</image48x48>
+        <image128x128>asset/icon/icon128.png</image128x128>
+    </icon>
+
+    <!-- <customUpdateUI></customUpdateUI> -->
+    <!-- <allowBrowserInvocation></allowBrowserInvocation> -->
+    <supportedProfiles>extendedDesktop</supportedProfiles>
+    <!-- <fileTypes> -->
+        <!-- Defines one file type. Optional. -->
+        <!-- <fileType> -->
+            <!-- <name></name> -->
+            <!-- <extension></extension> -->
+            <!-- <description></description> -->
+            <!-- <contentType></contentType> -->
+            <!-- <icon>
+                <image16x16></image16x16>
+                <image32x32></image32x32>
+                <image48x48></image48x48>
+                <image128x128></image128x128>
+            </icon> -->
+        <!-- </fileType> -->
+    <!-- </fileTypes> -->
+</application>
