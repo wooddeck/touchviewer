@@ -40,25 +40,27 @@ http://www.opensource.org/licenses/mit-license.php
             import flash.filesystem.*;
             import flash.ui.Multitouch;
             import flash.ui.MultitouchInputMode;
-            
+
             import jp.taiga.control.renderer.ImageTileListRenderer;
             import jp.taiga.control.window.ImageWindow;
             import jp.taiga.util.CapabilitiesUtil;
-            
+
             import mx.collections.ArrayCollection;
             import mx.events.EffectEvent;
             import mx.events.FlexEvent;
             import mx.events.ResizeEvent;
-            
+
             import spark.components.*;
             import spark.effects.Animate;
             import spark.effects.animation.MotionPath;
             import spark.effects.animation.SimpleMotionPath;
 
             /** 本アプリケーションで取り扱うファイルタイプ */
-            protected static const FILE_TYPE :RegExp                 = /(\.gif|\.jpg|\.png)$/;
+            protected static const FILE_TYPE :RegExp = /(\.gif|\.jpg|\.png)$/;
             /** 選択した画像一覧のルートディレクトリ */
-            protected var processList        :Vector.<NativeProcess> = new Vector.<NativeProcess>();
+            protected var processList        :Vector.<NativeProcess>;
+            /** ネイティブウィンドウインスタンス */
+            protected var _window            :ImageWindow;
             /** 「Windows 画像と FAX ビューア」 本体  */
             protected var _dll               :File;
             /** shimgvw.dll を起動するプロセス  */
@@ -76,19 +78,21 @@ http://www.opensource.org/licenses/mit-license.php
                 super.createChildren();
 
                 Multitouch.inputMode = MultitouchInputMode.GESTURE;
-                
+
+                processList = new Vector.<NativeProcess>();
+
                 var svi:StorageVolumeInfo;
                 svi = StorageVolumeInfo.storageVolumeInfo;
                 svi.addEventListener(StorageVolumeChangeEvent.STORAGE_VOLUME_MOUNT,   storageVolumeMountHandler,   false, 0, true);
                 svi.addEventListener(StorageVolumeChangeEvent.STORAGE_VOLUME_UNMOUNT, storageVolumeUnmountHandler, false, 0, true);
                 isWin = CapabilitiesUtil.isWin;
                 isMac = CapabilitiesUtil.isMac;
-                
+
                 if(isWin) {
                     _dll      = new File("C:/Windows/System32/shimgvw.dll");
                     _rundll32 = new File("C:/Windows/System32/rundll32.exe");
                 }
-                
+
                 fileList.addEventListener("imageSelect", fileListImageSelectHandler);
                 applicationPanel.titleDisplay.addEventListener(MouseEvent.MOUSE_DOWN, titleDisplayDownHandler);
             }
@@ -96,15 +100,15 @@ http://www.opensource.org/licenses/mit-license.php
             protected function closeHandler():void {
                 var i             :int;
                 var length_       :int;
-                var nativeWindow_ :NativeWindow;
+                var native_window :NativeWindow;
                 length_ = processList.length;
                 for(i = 0; i < length_; i++) {
                     processList[i].exit(true);
                 }
                 length_ = nativeApplication.openedWindows.length;
                 for(i = 0; i < length_; i++) {
-                    nativeWindow_ = nativeApplication.openedWindows[i] as NativeWindow;
-                    nativeWindow_.close();
+                    native_window = nativeApplication.openedWindows[i] as NativeWindow;
+                    native_window.close();
                 }
             }
             /** USB ストレージのマウント処理 */
@@ -247,12 +251,16 @@ http://www.opensource.org/licenses/mit-license.php
                     }, process_
                 );
             }
-            private var window_:ImageWindow;
             /** 新規 AIR Window と画像表示処理 */
             protected function callAIRImageView():void {
-                window_ = null;
-                window_ = new ImageWindow();
-                window_.addEventListener(FlexEvent.CREATION_COMPLETE,
+                _window = new ImageWindow();
+                _window.addEventListener(Event.CLOSE,
+                    function(event:Event):void {
+                        _window.removeEventListener(event.type, arguments.callee);
+                        _window = null;
+                    }, false, 0, true
+                );
+                _window.addEventListener(FlexEvent.CREATION_COMPLETE,
                     function(event:FlexEvent):void {
                         var fs:FileStream = new FileStream();
                         var ba:ByteArray  = new ByteArray();
@@ -265,12 +273,12 @@ http://www.opensource.org/licenses/mit-license.php
                         finally {
                             fs.close();
                         }
-                        window_.loader.loadBytes(ba);
-                        window_.removeEventListener(event.type, arguments.callee);
-                        window_.title = selectedFile.name;
+                        _window.loader.loadBytes(ba);
+                        _window.removeEventListener(event.type, arguments.callee);
+                        _window.title = selectedFile.name;
                     }, false, 0, true
                 );
-                window_.open();
+                _window.open();
             }
         ]]>
     </fx:Script>

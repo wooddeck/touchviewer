@@ -89,6 +89,7 @@ http://www.opensource.org/licenses/mit-license.php
 
                 nativeWindow.addEventListener(NativeWindowBoundsEvent.RESIZE, resizeHandler, false, 0, true);
 
+                addEventListener(Event.CLOSE, closeHandler, false, 0, true);
                 addEventListener(MouseEvent.ROLL_OVER, rollOverHandler, false, 0, true);
                 addEventListener(TransformGestureEvent.GESTURE_ZOOM,   gestureZoomHandler,   false, 0, true);
                 addEventListener(TransformGestureEvent.GESTURE_ROTATE, gestureRotateHandler, false, 0, true);
@@ -98,6 +99,18 @@ http://www.opensource.org/licenses/mit-license.php
                 updateRotationLabel();
                 updateScaleLabel();
                 updateLightnessLabel();
+            }
+            /** ウィンドウクローズ処理  */
+            protected function closeHandler(event:Event):void {
+                targetImage.removeChild(loader);
+                loader = null;
+                nativeWindow.removeEventListener(NativeWindowBoundsEvent.RESIZE, resizeHandler, false);
+                removeEventListener(Event.CLOSE, closeHandler, false);
+                removeEventListener(MouseEvent.ROLL_OVER, rollOverHandler, false);
+                removeEventListener(TransformGestureEvent.GESTURE_ZOOM,   gestureZoomHandler,   false);
+                removeEventListener(TransformGestureEvent.GESTURE_ROTATE, gestureRotateHandler, false);
+                removeEventListener(TransformGestureEvent.GESTURE_PAN,    gesturePanHandler,    false);
+                removeEventListener(TransformGestureEvent.GESTURE_SWIPE,  gestureSwipeHandler,  false);
             }
             /** 画像の角度ラベル更新処理 */
             protected function updateRotationLabel():void {
