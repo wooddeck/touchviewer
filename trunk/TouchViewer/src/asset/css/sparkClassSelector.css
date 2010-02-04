@@ -2,32 +2,32 @@
  *
  * Touch Viewer
  *
- * @author Copyright (c) 2009 taiga.jp.
- * @version 1.0
+ * @author Copyright (c) 2009-2010 taiga.jp.
+ * @version 1.1
  *
  * Developed by taiga
  * @see http://taiga.jp/
  *
- * Touch Viewer is (c) 2009 taiga.jp and is released under the MIT License:
+ * Touch Viewer is (c) 2009-2010 taiga.jp and is released under the MIT License:
  * http://www.opensource.org/licenses/mit-license.php
  *
  */
 .scaleLabel {
-    color	    : #ffffff;
+    color       : #ffffff;
     font-weight : bold;
     left        : 5;
     top         : 5;
     font-family : "_typewriter";
 }
 .rotationLabel {
-    color	    : #ffffff;
+    color       : #ffffff;
     font-weight : bold;
     left        : 5;
     top         : 20;
     font-family : "_typewriter";
 }
 .lightnessLabel {
-    color	    : #ffffff;
+    color       : #ffffff;
     font-weight : bold;
     left        : 5;
     top         : 35;
