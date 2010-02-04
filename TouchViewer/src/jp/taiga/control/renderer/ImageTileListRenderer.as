@@ -2,13 +2,13 @@
  *
  * Touch Viewer
  *
- * @author Copyright (c) 2009 taiga.jp.
- * @version 1.0
+ * @author Copyright (c) 2009-2010 taiga.jp.
+ * @version 1.1
  *
  * Developed by taiga
  * @see http://taiga.jp/
  *
- * Touch Viewer is (c) 2009 taiga.jp and is released under the MIT License:
+ * Touch Viewer is (c) 2009-2010 taiga.jp and is released under the MIT License:
  * http://www.opensource.org/licenses/mit-license.php
  *
  */
@@ -19,11 +19,11 @@ package jp.taiga.control.renderer {
     import flash.filesystem.File;
     import flash.filters.BlurFilter;
     import flash.geom.Matrix;
-    
+
     import jp.taiga.control.ExtensionLabel;
-    
+
     import mx.core.UIComponent;
-    
+
     import spark.skins.spark.DefaultComplexItemRenderer;
     /**
      * ImageTileListRenderer クラスは、TileList のレンダラークラスです。
@@ -74,8 +74,8 @@ package jp.taiga.control.renderer {
          */
         public function ImageTileListRenderer() {
             super();
-            selectionColor = 0x666666;
-            rollOverColor  = 0x666666;
+            setStyle("selectionColor", 0x666666);
+            setStyle("rollOverColor",  0x666666);
         }
         /** @inheritDoc */
         protected override function createChildren():void {
@@ -98,7 +98,7 @@ package jp.taiga.control.renderer {
             var length_  :int;
             var bitmaps_ :Array;
             var bmpData_ :BitmapData;
-            
+
             if(image != null) {
                 image.setStyle("verticalCenter", 0);
                 image.setStyle("horizontalCenter", 0);

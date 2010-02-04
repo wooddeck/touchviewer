@@ -3,20 +3,20 @@
 
 Touch Viewer
 
-@author Copyright (c) 2009 taiga.jp.
-@version 1.0
+@author Copyright (c) 2009-2010 taiga.jp.
+@version 1.1
 
 Developed by taiga
 @see http://taiga.jp/
 
-Touch Viewer is (c) 2009 taiga.jp and is released under the MIT License:
+Touch Viewer is (c) 2009-2010 taiga.jp and is released under the MIT License:
 http://www.opensource.org/licenses/mit-license.php
 
 -->
 <s:WindowedApplication
     xmlns:fx            = "http://ns.adobe.com/mxml/2009"
     xmlns:s             = "library://ns.adobe.com/flex/spark"
-    xmlns:mx            = "library://ns.adobe.com/flex/halo"
+    xmlns:mx            = "library://ns.adobe.com/flex/mx"
     xmlns:control       = "jp.taiga.control.*"
     width               = "440"
     height.dafaultState = "32"
