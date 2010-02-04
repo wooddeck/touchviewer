@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!---
+
+Touch Viewer
+
+@author Copyright (c) 2009 taiga.jp.
+@version 1.0
+
+Developed by taiga
+@see http://taiga.jp/
+
+Touch Viewer is (c) 2009 taiga.jp and is released under the MIT License:
+http://www.opensource.org/licenses/mit-license.php
+
+-->
+<s:WindowedApplication
+    xmlns:fx            = "http://ns.adobe.com/mxml/2009"
+    xmlns:s             = "library://ns.adobe.com/flex/spark"
+    xmlns:mx            = "library://ns.adobe.com/flex/halo"
+    xmlns:control       = "jp.taiga.control.*"
+    width               = "440"
+    height.dafaultState = "32"
+    height.expandState  = "550"
+    showStatusBar       = "false"
+    close               = "closeHandler()"
+>
+
+    <fx:Style source="asset/css/mxTypeSelector.css" />
+    <fx:Style source="asset/css/sparkTypeSelector.css" />
+    <fx:Style source="asset/css/sparkClassSelector.css" />
+
+    <fx:Script>
+        <![CDATA[
+            import flash.desktop.*;
+            import flash.display.NativeWindow;
+            import flash.events.Event;
+            import flash.events.MouseEvent;
+            import flash.events.NativeProcessExitEvent;
+            import flash.events.StorageVolumeChangeEvent;
+            import flash.filesystem.*;
+            import flash.ui.Multitouch;
+            import flash.ui.MultitouchInputMode;
+
+            import jp.taiga.control.renderer.ImageTileListRenderer;
+            import jp.taiga.control.window.ImageWindow;
+            import jp.taiga.util.CapabilitiesUtil;
+
+            import mx.collections.ArrayCollection;
+            import mx.events.EffectEvent;
+            import mx.events.FlexEvent;
+            import mx.events.ResizeEvent;
+
+            import spark.components.*;
+            import spark.effects.Animate;
+            import spark.effects.animation.MotionPath;
+            import spark.effects.animation.SimpleMotionPath;
+
+            /** 本アプリケーションで取り扱うファイルタイプ */
+            protected static const FILE_TYPE :RegExp = /(\.gif|\.jpg|\.png)$/;
+            /** 選択した画像一覧のルートディレクトリ */
+            protected var processList        :Vector.<NativeProcess>;
+            /** ネイティブウィンドウインスタンス */
+            protected var _window            :ImageWindow;
+            /** 「Windows 画像と FAX ビューア」 本体  */
+            protected var _dll               :File;
+            /** shimgvw.dll を起動するプロセス  */
+            protected var _rundll32          :File;
+            /** 選択した画像一覧のルートディレクトリ */
+            protected var selectedDirectory  :File;
+            /** 選択した画像ファイル */
+            protected var selectedFile       :File;
+            /** 実行環境判別フラグ (Windows) */
+            protected var isWin              :Boolean;
+            /** 実行環境判別フラグ (Mac OS) */
+            protected var isMac              :Boolean;
+            /** @inheritDoc */
+            protected override function createChildren() : void {
+                super.createChildren();
+
+                Multitouch.inputMode = MultitouchInputMode.GESTURE;
+
+                processList = new Vector.<NativeProcess>();
+
+                var svi:StorageVolumeInfo;
+                svi = StorageVolumeInfo.storageVolumeInfo;
+                svi.addEventListener(StorageVolumeChangeEvent.STORAGE_VOLUME_MOUNT,   storageVolumeMountHandler,   false, 0, true);
+                svi.addEventListener(StorageVolumeChangeEvent.STORAGE_VOLUME_UNMOUNT, storageVolumeUnmountHandler, false, 0, true);
+                isWin = CapabilitiesUtil.isWin;
+                isMac = CapabilitiesUtil.isMac;
+
+                if(isWin) {
+                    _dll      = new File("C:/Windows/System32/shimgvw.dll");
+                    _rundll32 = new File("C:/Windows/System32/rundll32.exe");
+                }
+
+                fileList.addEventListener("imageSelect", fileListImageSelectHandler);
+                applicationPanel.titleDisplay.addEventListener(MouseEvent.MOUSE_DOWN, titleDisplayDownHandler);
+            }
+            /** アプリケーション終了時の処理 */
+            protected function closeHandler():void {
+                var i             :int;
+                var length_       :int;
+                var native_window :NativeWindow;
+                length_ = processList.length;
+                for(i = 0; i < length_; i++) {
+                    processList[i].exit(true);
+                }
+                length_ = nativeApplication.openedWindows.length;
+                for(i = 0; i < length_; i++) {
+                    native_window = nativeApplication.openedWindows[i] as NativeWindow;
+                    native_window.close();
+                }
+            }
+            /** USB ストレージのマウント処理 */
+            protected function storageVolumeMountHandler(event:StorageVolumeChangeEvent):void {
+                if(event.rootDirectory != null) {
+                    selectedDirectory = event.rootDirectory;
+                    currentState = "expandState";
+                }
+            }
+            /** USB ストレージのアンマウント処理 */
+            protected function storageVolumeUnmountHandler(event:StorageVolumeChangeEvent):void {
+                currentState = "dafaultState";
+            }
+            /** ディレクトリをブラウズする処理 */
+            protected function openDirectory():void {
+                selectedDirectory = new File();
+                selectedDirectory.addEventListener(Event.SELECT, selectedDirectorySelectHandler, false, 0, true);
+                selectedDirectory.browseForDirectory("Select a image directory.");
+            }
+            /** ディレクトリ選択処理 */
+            protected function selectedDirectorySelectHandler(event:Event):void {
+                selectedDirectory.removeEventListener(event.type, arguments.callee);
+                changeExpandState();
+            }
+            /** ステート変更 (expandState) */
+            protected function changeExpandState():void {
+                currentState = "expandState";
+            }
+            /** ステート変更 (dafaultState) */
+            protected function changeDefaultState():void {
+                currentState = "dafaultState";
+            }
+            /** expandState 変更完了処理 ( setFileData() を遅延実行 )  */
+            protected function expandEffectEndHandler(event:EffectEvent):void {
+                callLater(setFileData, [selectedDirectory]);
+            }
+            /** dafaultState 変更完了処理  */
+            protected function dafaultEffectEndHandler(event:EffectEvent):void {
+                fileList.dataProvider = null;
+                slider.value = 0;
+                slider.enabled = false;
+            }
+            /** 選択ディレクトリ内の画像ファイルをリストに表示 */
+            protected function setFileData(f:File):void {
+                var a       :Array = f.getDirectoryListing();
+                var ac      :ArrayCollection = new ArrayCollection();
+                var i       :int;
+                var length_ :int = a.length;
+                var file_   :File;
+
+                for(i = 0; i < length_; i++) {
+                    file_ = a[i] as File;
+                    if(file_.name.toLowerCase().match(FILE_TYPE)) {
+                        ac.addItem(file_);
+                    }
+                }
+                fileList.dataProvider = ac;
+
+                slider.enabled = true;
+            }
+            /** スライダー変更処理 */
+            protected function sliderChangeHandler(event:Event):void {
+                changeSliderMaximumValue();
+                var a :Animate             = new Animate(tileLayout);
+                var m :Vector.<MotionPath> = new Vector.<MotionPath>();
+                var s :SimpleMotionPath    = new SimpleMotionPath("verticalScrollPosition");
+                s.valueTo = slider.value;
+                m.push(s);
+                a.motionPaths = m;
+                a.play();
+                fileList.validateNow();
+            }
+            /** アプリケーション終了ボタン処理 */
+            protected function closeButtonClickHandler():void {
+                nativeWindow.close();
+            }
+            /** アプリケーションのヘッダのマウスダウン処理 */
+            protected function titleDisplayDownHandler(event:MouseEvent):void {
+                nativeWindow.startMove();
+            }
+            /** リストのリサイズ処理 */
+            protected function fileListResizeHandler(event:ResizeEvent):void {
+                changeSliderMaximumValue();
+            }
+            /** スライダーの最大値変更処理 */
+            protected function changeSliderMaximumValue():void {
+                slider.maximum = tileLayout.target.contentHeight - tileLayout.target.height;
+            }
+            /** リストのレンダラー選択処理 */
+            protected function fileListImageSelectHandler(event:Event):void {
+                var renderer:ImageTileListRenderer = event.target as ImageTileListRenderer;
+                selectedFile = renderer.data as File;
+                if(selectedFile.name.toLowerCase().match(FILE_TYPE)) {
+                    if(viewerRadioButtonGroup.selectedValue == "nativeViewer") {
+                        if(isWin) {
+                            callNativeImageView();
+                        }
+                        else if(isMac) {
+                            selectedFile.openWithDefaultApplication();
+                        }
+                    }
+                    else if(viewerRadioButtonGroup.selectedValue == "originalViewer") {
+                        callAIRImageView();
+                    }
+                }
+            }
+            /** 画像表示アプリ起動 ( ネイティブプロセスの実行 ( Windows のみ ) ) */
+            protected function callNativeImageView():void {
+                var nativeProcessStartupInfo_:NativeProcessStartupInfo;
+                var process_                 :NativeProcess;
+                var processArgs_             :Vector.<String>;
+
+                processArgs_ = new Vector.<String>();
+                processArgs_.push(_dll.nativePath + ",ImageView_Fullscreen");
+                processArgs_.push(selectedFile.nativePath);
+
+                nativeProcessStartupInfo_            = new NativeProcessStartupInfo();
+                nativeProcessStartupInfo_.executable = _rundll32;
+                nativeProcessStartupInfo_.arguments  = processArgs_;
+
+                process_ = new NativeProcess();
+                process_.addEventListener(NativeProcessExitEvent.EXIT, processExitHandler);
+                process_.start(nativeProcessStartupInfo_);
+                processList.push(process_);
+
+            }
+            /** ネイティブプロセス終了検知処理 ( Windows のみ ) */
+            protected function processExitHandler(event:NativeProcessExitEvent):void {
+                var process_:NativeProcess = event.currentTarget as NativeProcess;
+                process_.removeEventListener(event.type, arguments.callee);
+                processList.some(
+                    function(item:NativeProcess, index:int, vector:Vector.<NativeProcess>):Boolean {
+                        if(item == process_) {
+                            vector.splice(index, 1);
+                            return true;
+                        }
+                        else {
+                            return false;
+                        }
+                    }, process_
+                );
+            }
+            /** 新規 AIR Window と画像表示処理 */
+            protected function callAIRImageView():void {
+                _window = new ImageWindow();
+                _window.addEventListener(Event.CLOSE,
+                    function(event:Event):void {
+                        _window.removeEventListener(event.type, arguments.callee);
+                        _window = null;
+                    }, false, 0, true
+                );
+                _window.addEventListener(FlexEvent.CREATION_COMPLETE,
+                    function(event:FlexEvent):void {
+                        var fs:FileStream = new FileStream();
+                        var ba:ByteArray  = new ByteArray();
+                        try {
+                            fs.open(selectedFile, FileMode.READ);
+                            fs.readBytes(ba);
+                        }
+                        catch ( e:Error ) {
+                        }
+                        finally {
+                            fs.close();
+                        }
+                        _window.loader.loadBytes(ba);
+                        _window.removeEventListener(event.type, arguments.callee);
+                        _window.title = selectedFile.name;
+                    }, false, 0, true
+                );
+                _window.open();
+            }
+        ]]>
+    </fx:Script>
+
+    <fx:Declarations>
+        <s:Bounce id="expandBounce" />
+        <s:Linear id="closeLinear" easeInFraction="0.2" />
+        <s:RadioButtonGroup id="viewerRadioButtonGroup" />
+    </fx:Declarations>
+
+    <s:states>
+        <s:State name="dafaultState" />
+        <s:State name="expandState" />
+    </s:states>
+
+    <s:transitions>
+        <s:Transition fromState="dafaultState" toState="expandState">
+            <s:Parallel duration="500" effectEnd="expandEffectEndHandler(event)">
+                <s:Resize target="{this}" easer="{expandBounce}" />
+            </s:Parallel>
+        </s:Transition>
+        <s:Transition fromState="expandState" toState="dafaultState">
+            <s:Parallel duration="300" effectEnd="dafaultEffectEndHandler(event)">
+                <s:Resize target="{this}" easer="{closeLinear}" />
+            </s:Parallel>
+        </s:Transition>
+    </s:transitions>
+
+    <s:Panel id="applicationPanel" width="100%" height="100%" title="Touch Viewer">
+
+        <s:layout>
+            <s:VerticalLayout />
+        </s:layout>
+
+        <s:HGroup id="panelContent" width="100%" height="100%" includeIn="expandState" itemCreationPolicy="immediate">
+
+            <s:List
+                id                     = "fileList"
+                width                  = "100%"
+                height                 = "100%"
+                contentBackgroundColor = "#333333"
+                itemRenderer           = "jp.taiga.control.renderer.ImageTileListRenderer"
+                borderVisible          = "false"
+                selectionColor         = "#ffffff"
+            >
+                <s:layout>
+                    <s:TileLayout id="tileLayout" />
+                </s:layout>
+            </s:List>
+
+            <s:VSlider
+                id          = "slider"
+                minimum     = "0"
+                height      = "100%"
+                rotation    = "180"
+                showDataTip = "false"
+                enabled     = "false"
+                change      = "sliderChangeHandler(event)"
+             />
+
+        </s:HGroup>
+
+    </s:Panel>
+
+    <s:Button id="closeButton"        width="40"  height="20" label="×"     styleName="closeButton" click="closeButtonClickHandler()" />
+
+    <s:Button id="browseButton"       width="100" height="20" label="open"  styleName="stateButton" includeIn="dafaultState" click="openDirectory()" />
+    <s:Button id="defaultStateButton" width="100" height="20" label="close" styleName="stateButton" includeIn="expandState"  click="changeDefaultState()" />
+
+    <s:RadioButton id="nativeButton"   value="nativeViewer"   selected="false" groupName="viewerRadioButtonGroup" label="native"   styleName="nativeRadioButton"   includeIn="expandState" />
+    <s:RadioButton id="originalButton" value="originalViewer" selected="true"  groupName="viewerRadioButtonGroup" label="original" styleName="originalRadioButton" includeIn="expandState" />
+
+</s:WindowedApplication>
