@@ -4,7 +4,7 @@
 Touch Viewer
 
 @author Copyright (c) 2009-2010 taiga.jp.
-@version 1.0
+@version 1.2
 
 Developed by taiga
 @see http://taiga.jp/
@@ -13,14 +13,13 @@ Touch Viewer is (c) 2009-2010 taiga.jp and is released under the MIT License:
 http://www.opensource.org/licenses/mit-license.php
 
 -->
-<application xmlns="http://ns.adobe.com/air/application/2.0beta2">
+<application xmlns="http://ns.adobe.com/air/application/2.0">
 
     <id>TouchViewer</id>
     <filename>TouchViewer</filename>
     <name>TouchViewer</name>
-    <version>v1.1</version>
-    <!-- <description></description> -->
-
+    <version>v1.2</version>
+    <description>Touch Viewer は、指定ディレクトリまたは、マウントした USB ストレージデバイス直下に保存されている画像ファイル ( JPG、GIF、PNG 形式 ) を一覧表示して、選択した画像を閲覧することのできる Flex 4 ベースの画像ビューアアプリケーションです。</description>
     <copyright>taiga.jp</copyright>
 
     <initialWindow>

@@ -4,7 +4,7 @@
 Touch Viewer
 
 @author Copyright (c) 2009-2010 taiga.jp.
-@version 1.1
+@version 1.2
 
 Developed by taiga
 @see http://taiga.jp/
@@ -78,8 +78,8 @@ http://www.opensource.org/licenses/mit-license.php
                 _lightness = 0;
                 _panDV     = 0;
 
-                dx_ = _width  / 2;
-                dy_ = _height / 2;
+                dx_ = _width  * 0.5;
+                dy_ = _height * 0.5;
 
                 loader.x = dx_;
                 loader.y = dy_;
@@ -126,8 +126,8 @@ http://www.opensource.org/licenses/mit-license.php
             }
             /** ウィンドウのリサイズ処理 */
             protected function resizeHandler(event:NativeWindowBoundsEvent):void {
-                var dx_:Number = targetImage.width  / 2;
-                var dy_:Number = targetImage.height / 2;
+                var dx_:Number = targetImage.width  * 0.5;
+                var dy_:Number = targetImage.height * 0.5;
                 loader.x = dx_;
                 loader.y = dy_;
             }

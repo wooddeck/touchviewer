@@ -3,7 +3,7 @@
  * Touch Viewer
  *
  * @author Copyright (c) 2009-2010 taiga.jp.
- * @version 1.1
+ * @version 1.2
  *
  * Developed by taiga
  * @see http://taiga.jp/
@@ -14,6 +14,7 @@
  */
 package jp.taiga.control.renderer {
     import flash.display.BitmapData;
+    import flash.display.Graphics;
     import flash.events.Event;
     import flash.events.MouseEvent;
     import flash.filesystem.File;
@@ -21,24 +22,33 @@ package jp.taiga.control.renderer {
     import flash.geom.Matrix;
 
     import jp.taiga.control.ExtensionLabel;
+    import jp.taiga.event.ListSelectEvent;
 
     import mx.core.UIComponent;
 
     import spark.skins.spark.DefaultComplexItemRenderer;
+    /** ImageTileListRenderer を選択した直後のタイミングに送出されます。 */
+    [Event (name="imageSelecting", type="jp.taiga.event.ListSelectEvent")]
+    /** ImageTileListRenderer を選択してエフェクトが完了したタイミングに送出されます。 */
+    [Event (name="imageSelected", type="jp.taiga.event.ListSelectEvent")]
     /**
      * ImageTileListRenderer クラスは、TileList のレンダラークラスです。
      */
     public class ImageTileListRenderer extends DefaultComplexItemRenderer {
         /** リストのデータ */
-        private var __data    :Object;
+        private var __data       :Object;
+        /** 更新直前のリストのデータ */
+        private var __oldData    :Object;
+        /** フィルタインスタンス */
+        private var __filter     :BlurFilter;
         /** ファイル、 フォルダ用アイコン */
-        protected var image   :UIComponent;
+        protected var image      :UIComponent;
         /** アイコン選択時のエフェクト */
-        protected var effect  :UIComponent;
+        protected var effect     :UIComponent;
         /** ファイル、フォルダ名ラベル */
-        protected var labell  :ExtensionLabel
+        protected var labell     :ExtensionLabel
         /** ファイル、フォルダから取得できるビットマップ */
-        protected var bmpData :BitmapData;
+        protected var bitmapData :BitmapData;
         /** @inheritDoc */
         public override function get data():Object {
             return __data;
@@ -46,27 +56,11 @@ package jp.taiga.control.renderer {
         /** @private */
         public override function set data(value:Object) : void {
             if(value != null) {
-                __data = value;
-                invalidateProperties();
-            }
-            else {
-                if(bmpData != null) {
-                    bmpData.dispose();
-                    bmpData = null;
+                if(__data != value) {
+                    __data = value;
+                    invalidateProperties();
+                    invalidateDisplayList();
                 }
-                if(image != null) {
-                    removeElement(image);
-                    image = null;
-                }
-                if(effect != null) {
-                    removeElement(effect);
-                    effect = null;
-                }
-                if(labell != null) {
-                    removeElement(labell);
-                    labell = null;
-                }
-                __data = value;
             }
         }
         /**
@@ -74,74 +68,134 @@ package jp.taiga.control.renderer {
          */
         public function ImageTileListRenderer() {
             super();
+            minWidth  = 100;
+            minHeight = 100;
             setStyle("selectionColor", 0x666666);
             setStyle("rollOverColor",  0x666666);
         }
         /** @inheritDoc */
         protected override function createChildren():void {
             super.createChildren();
+
+            __filter = new BlurFilter();
+
             image  = addElement( new UIComponent()    ) as UIComponent;
             effect = addElement( new UIComponent()    ) as UIComponent;
             labell = addElement( new ExtensionLabel() ) as ExtensionLabel;
             labell.percentWidth = 100;
+
             addEventListener(MouseEvent.CLICK, onClickHandler, false, 0, true);
-        }
-        /** @inheritDoc */
-        protected override function measure() : void {
-            minWidth  = 100;
-            minHeight = 100;
+            addEventListener(Event.REMOVED_FROM_STAGE, removedFromStageHandler, false, 0, true);
         }
         /** @inheritDoc */
         protected override function commitProperties() : void {
             super.commitProperties();
+            if(__oldData == __data) {
+                return;
+            }
             var i        :int;
-            var length_  :int;
+            var l        :int;
             var bitmaps_ :Array;
-            var bmpData_ :BitmapData;
-
+            var bd       :BitmapData;
             if(image != null) {
                 image.setStyle("verticalCenter", 0);
                 image.setStyle("horizontalCenter", 0);
-                effect.setStyle("verticalCenter", 0);
-                effect.setStyle("horizontalCenter", 0);
                 if(__data != null) {
-                    bmpData = new BitmapData(1,1);
+                    bitmapData = new BitmapData(1, 1);
                     bitmaps_ = ( __data as File ).icon.bitmaps;
-                    length_ = bitmaps_.length;
-                    for (i = 0; i < length_; i++) {
-                        bmpData_ = bitmaps_[i] as BitmapData;
-                        if (bmpData_.height > bmpData.height && bmpData_.height <= 32) {
-                            bmpData = bmpData_;
+                    l = bitmaps_.length;
+                    for (i = 0; i < l; i++) {
+                        bd = bitmaps_[i] as BitmapData;
+                        if (bd.height > bitmapData.height && bd.height <= 32) {
+                            bitmapData = bd;
                         }
                         else {
-                            bmpData_.dispose();
-                            bmpData_ = null;
+                            bd.dispose();
+                            bd = null;
                         }
                     }
-                    image.graphics.clear();
-                    image.graphics.beginBitmapFill(bmpData, new Matrix(1,0,0,1,-bmpData.width / 2,-bmpData.height / 2));
-                    image.graphics.drawRect(-bmpData.width / 2, -bmpData.height / 2, bmpData.width,bmpData.height);
-                    image.graphics.endFill();
-                    effect.graphics.clear();
-                    effect.graphics.beginBitmapFill(bmpData, new Matrix(1,0,0,1,-bmpData.width / 2,-bmpData.height / 2));
-                    effect.graphics.drawRect(-bmpData.width / 2, -bmpData.height / 2, bmpData.width,bmpData.height);
-                    effect.graphics.endFill();
                 }
+            }
+            if(effect != null) {
+                effect.setStyle("verticalCenter", 0);
+                effect.setStyle("horizontalCenter", 0);
                 effect.setVisible(false, true);
             }
             if(labell != null) {
                 labell.setStyle("color", 0xffffff);
                 labell.setStyle("horizontalCenter", 0);
                 labell.setStyle("bottom", 5);
-                if(__data != null) {
-                    labell.text = ( __data as File ).name;
+            }
+        }
+        /** @inheritDoc */
+        protected override function updateDisplayList(unscaledWidth:Number, unscaledHeight:Number):void {
+            super.updateDisplayList(unscaledWidth, unscaledHeight);
+            if(__oldData == __data) {
+                return;
+            }
+            cacheAsBitmap = false;
+            var bdw      :Number;
+            var bdwh     :Number;
+            var bdh      :Number;
+            var bdhh     :Number;
+            var m        :Matrix;
+            var g        :Graphics;
+            if(image != null) {
+                if(bitmapData != null) {
+                    bdw = bitmapData.width;
+                    bdh = bitmapData.height;
+                    bdwh = -bdw * 0.5;
+                    bdhh = -bdh * 0.5;
+
+                    m = new Matrix(1, 0, 0, 1, bdwh, bdhh);
+
+                    g = image.graphics;
+                    g.clear();
+                    g.beginBitmapFill(bitmapData, m);
+                    g.drawRect(bdwh, bdhh, bdw, bdh);
+                    g.endFill();
+
+                    g = effect.graphics;
+                    g.clear();
+                    g.beginBitmapFill(bitmapData, m);
+                    g.drawRect(bdwh, bdhh, bdw, bdh);
+                    g.endFill();
                 }
             }
+            if(labell != null) {
+                if(__data != null) {
+                    labell.text = ( __data as File ).name;
+                    labell.validateNow();
+                }
+            }
+
+            cacheAsBitmap = true;
+
+            __oldData = __data;
+
+        }
+        /** レンダラー破棄処理 */
+        protected function removedFromStageHandler(event:Event):void {
+            if(bitmapData != null) {
+                bitmapData.dispose();
+                bitmapData = null;
+            }
+            if(image != null) {
+                image.graphics.clear();
+            }
+            if(effect != null) {
+                effect.graphics.clear();
+            }
+            __data = null;
+            __oldData = null;
+            cacheAsBitmap = false;
         }
         /** レンダラークリック処理 */
         protected function onClickHandler(event:MouseEvent):void {
+            dispatchEvent( ListSelectEvent.createImageSelectingEvent() );
+            cacheAsBitmap = false;
             effect.setVisible(true, true);
-            effect.filters = [new BlurFilter()];
+            effect.filters = [__filter];
             addEventListener(Event.ENTER_FRAME, enterFrameHandler);
         }
         /** レンダラークリック後のエフェクト処理 */
@@ -157,7 +211,8 @@ package jp.taiga.control.renderer {
                 effect.scaleX  = 1;
                 effect.scaleY  = 1;
                 effect.alpha   = 1;
-                dispatchEvent( new Event("imageSelect", true) );
+                dispatchEvent( ListSelectEvent.createImageSelectedEvent() );
+                cacheAsBitmap = true;
             }
         }
     }
