@@ -1,0 +1,72 @@
+/**
+ *
+ * Touch Viewer
+ *
+ * @author Copyright (c) 2009-2010 taiga.jp.
+ * @version 1.1
+ *
+ * Developed by taiga
+ * @see http://taiga.jp/
+ *
+ * Touch Viewer is (c) 2009-2010 taiga.jp and is released under the MIT License:
+ * http://www.opensource.org/licenses/mit-license.php
+ *
+ */
+.scaleLabel {
+    color       : #ffffff;
+    font-weight : bold;
+    left        : 5;
+    top         : 5;
+    font-family : "_typewriter";
+}
+.rotationLabel {
+    color       : #ffffff;
+    font-weight : bold;
+    left        : 5;
+    top         : 20;
+    font-family : "_typewriter";
+}
+.lightnessLabel {
+    color       : #ffffff;
+    font-weight : bold;
+    left        : 5;
+    top         : 35;
+    font-family : "_typewriter";
+}
+.scaleButtonLabel {
+    right       : 7;
+    top         : 7;
+    skin-class  : ClassReference("jp.taiga.skin.LeftLabelButtonSkin");
+}
+.rotationButtonLabel {
+    right       : 7;
+    top         : 30;
+    text-align  : right;
+    skin-class  : ClassReference("jp.taiga.skin.LeftLabelButtonSkin");
+}
+.lightnessButtonLabel {
+    right       : 7;
+    top         : 53;
+    text-align  : right;
+    skin-class  : ClassReference("jp.taiga.skin.LeftLabelButtonSkin");
+}
+.nativeRadioButton {
+    color : #ffffff;
+    top   : 7;
+    right : 165;
+}
+.originalRadioButton {
+    color : #ffffff;
+    top   : 7;
+    right : 220;
+}
+.closeButton {
+    top         : 7;
+    right       : 7;
+    font-weight : bold;
+}
+.stateButton {
+    top   : 7;
+    right : 55;
+}
+
