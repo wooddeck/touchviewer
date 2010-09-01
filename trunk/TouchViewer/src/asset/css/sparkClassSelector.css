@@ -3,7 +3,7 @@
  * Touch Viewer
  *
  * @author Copyright (c) 2009-2010 taiga.jp.
- * @version 1.1
+ * @version 1.2
  *
  * Developed by taiga
  * @see http://taiga.jp/
