@@ -51,7 +51,7 @@ http://www.opensource.org/licenses/mit-license.php
 
     <!-- <customUpdateUI></customUpdateUI> -->
     <!-- <allowBrowserInvocation></allowBrowserInvocation> -->
-    <supportedProfiles>extendedDesktop</supportedProfiles>
+    <supportedProfiles>desktop</supportedProfiles>
     <!-- <fileTypes> -->
         <!-- Defines one file type. Optional. -->
         <!-- <fileType> -->
