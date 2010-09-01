@@ -35,20 +35,20 @@ package jp.taiga.control.renderer {
      * ImageTileListRenderer クラスは、TileList のレンダラークラスです。
      */
     public class ImageTileListRenderer extends DefaultComplexItemRenderer {
+        /** @private */
+        private static const FILTERS :Array = [new BlurFilter()];
         /** リストのデータ */
-        private var __data       :Object;
+        private var __data           :Object;
         /** 更新直前のリストのデータ */
-        private var __oldData    :Object;
-        /** フィルタインスタンス */
-        private var __filter     :BlurFilter;
+        private var __oldData        :Object;
         /** ファイル、 フォルダ用アイコン */
-        protected var image      :UIComponent;
+        protected var image          :UIComponent;
         /** アイコン選択時のエフェクト */
-        protected var effect     :UIComponent;
+        protected var effect         :UIComponent;
         /** ファイル、フォルダ名ラベル */
-        protected var labell     :ExtensionLabel
+        protected var labell         :ExtensionLabel
         /** ファイル、フォルダから取得できるビットマップ */
-        protected var bitmapData :BitmapData;
+        protected var bitmapData     :BitmapData;
         /** @inheritDoc */
         public override function get data():Object {
             return __data;
@@ -76,8 +76,6 @@ package jp.taiga.control.renderer {
         /** @inheritDoc */
         protected override function createChildren():void {
             super.createChildren();
-
-            __filter = new BlurFilter();
 
             image  = addElement( new UIComponent()    ) as UIComponent;
             effect = addElement( new UIComponent()    ) as UIComponent;
@@ -195,7 +193,7 @@ package jp.taiga.control.renderer {
             dispatchEvent( ListSelectEvent.createImageSelectingEvent() );
             cacheAsBitmap = false;
             effect.setVisible(true, true);
-            effect.filters = [__filter];
+            effect.filters = FILTERS;
             addEventListener(Event.ENTER_FRAME, enterFrameHandler);
         }
         /** レンダラークリック後のエフェクト処理 */
