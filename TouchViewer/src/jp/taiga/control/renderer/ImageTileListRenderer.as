@@ -20,7 +20,6 @@ package jp.taiga.control.renderer {
     import flash.filesystem.File;
     import flash.filters.BlurFilter;
     import flash.geom.Matrix;
-    import flash.utils.getTimer;
 
     import jp.taiga.control.ExtensionLabel;
     import jp.taiga.event.ListSelectEvent;
