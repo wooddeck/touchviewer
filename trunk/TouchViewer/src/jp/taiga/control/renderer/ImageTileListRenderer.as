@@ -20,13 +20,15 @@ package jp.taiga.control.renderer {
     import flash.filesystem.File;
     import flash.filters.BlurFilter;
     import flash.geom.Matrix;
-
+    import flash.utils.getTimer;
+    
     import jp.taiga.control.ExtensionLabel;
     import jp.taiga.event.ListSelectEvent;
-
+    
     import mx.core.UIComponent;
-
+    
     import spark.skins.spark.DefaultComplexItemRenderer;
+
     /** ImageTileListRenderer を選択した直後のタイミングに送出されます。 */
     [Event (name="imageSelecting", type="jp.taiga.event.ListSelectEvent")]
     /** ImageTileListRenderer を選択してエフェクトが完了したタイミングに送出されます。 */
@@ -57,8 +59,24 @@ package jp.taiga.control.renderer {
         public override function set data(value:Object) : void {
             if(value != null) {
                 if(__data != value) {
+					var i        :int;
+					var l        :int;
+					var bitmaps_ :Array;
+					var bd       :BitmapData;
                     __data = value;
-                    invalidateProperties();
+//FIXME:Mac で File.icon.bitmaps は高コストなので、代替手段を検討する
+					bitmaps_ = (__data as File).icon.bitmaps;
+                    l = bitmaps_.length;
+                    for (i = 0; i < l; i++) {
+                        bd = bitmaps_[i] as BitmapData;
+                        if (bd.height != 32) {
+							continue;
+                        }
+						else {
+	                        bitmapData = bd;
+							break;
+						}
+                    }
                     invalidateDisplayList();
                 }
             }
@@ -78,52 +96,22 @@ package jp.taiga.control.renderer {
             super.createChildren();
 
             image  = addElement( new UIComponent()    ) as UIComponent;
+			image.setStyle("verticalCenter", 0);
+			image.setStyle("horizontalCenter", 0);
+
             effect = addElement( new UIComponent()    ) as UIComponent;
-            labell = addElement( new ExtensionLabel() ) as ExtensionLabel;
+			effect.setStyle("verticalCenter", 0);
+			effect.setStyle("horizontalCenter", 0);
+			effect.setVisible(false, true);
+
+			labell = addElement( new ExtensionLabel() ) as ExtensionLabel;
             labell.percentWidth = 100;
+			labell.setStyle("color", 0xffffff);
+			labell.setStyle("horizontalCenter", 0);
+			labell.setStyle("bottom", 5);
 
             addEventListener(MouseEvent.CLICK, onClickHandler, false, 0, true);
             addEventListener(Event.REMOVED_FROM_STAGE, removedFromStageHandler, false, 0, true);
-        }
-        /** @inheritDoc */
-        protected override function commitProperties() : void {
-            super.commitProperties();
-            if(__oldData == __data) {
-                return;
-            }
-            var i        :int;
-            var l        :int;
-            var bitmaps_ :Array;
-            var bd       :BitmapData;
-            if(image != null) {
-                image.setStyle("verticalCenter", 0);
-                image.setStyle("horizontalCenter", 0);
-                if(__data != null) {
-                    bitmapData = new BitmapData(1, 1);
-                    bitmaps_ = ( __data as File ).icon.bitmaps;
-                    l = bitmaps_.length;
-                    for (i = 0; i < l; i++) {
-                        bd = bitmaps_[i] as BitmapData;
-                        if (bd.height > bitmapData.height && bd.height <= 32) {
-                            bitmapData = bd;
-                        }
-                        else {
-                            bd.dispose();
-                            bd = null;
-                        }
-                    }
-                }
-            }
-            if(effect != null) {
-                effect.setStyle("verticalCenter", 0);
-                effect.setStyle("horizontalCenter", 0);
-                effect.setVisible(false, true);
-            }
-            if(labell != null) {
-                labell.setStyle("color", 0xffffff);
-                labell.setStyle("horizontalCenter", 0);
-                labell.setStyle("bottom", 5);
-            }
         }
         /** @inheritDoc */
         protected override function updateDisplayList(unscaledWidth:Number, unscaledHeight:Number):void {
