@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!---
+
+Touch Viewer
+
+@author Copyright (c) 2009-2010 taiga.jp.
+@version 1.2
+
+Developed by taiga
+@see http://taiga.jp/
+
+Touch Viewer is (c) 2009-2010 taiga.jp and is released under the MIT License:
+http://www.opensource.org/licenses/mit-license.php
+
+-->
+<s:Window
+    xmlns:fx      = "http://ns.adobe.com/mxml/2009"
+    xmlns:s       = "library://ns.adobe.com/flex/spark"
+    xmlns:mx      = "library://ns.adobe.com/flex/mx"
+    showStatusBar = "false"
+>
+    <fx:Script>
+        <![CDATA[
+            import flash.display.Loader;
+            import flash.display.LoaderInfo;
+            import flash.events.Event;
+            import flash.events.GesturePhase;
+            import flash.events.MouseEvent;
+            import flash.events.NativeWindowBoundsEvent;
+            import flash.events.TransformGestureEvent;
+            import flash.geom.ColorTransform;
+
+            import jp.taiga.util.CapabilitiesUtil;
+
+            import spark.filters.GlowFilter;
+            /** @private */
+            private static const FILTERS :Array = [new GlowFilter(0x000000, 1, 5, 5, 400, 1)];
+            /** @private */
+            private var _width           :Number;
+            /** @private */
+            private var _height          :Number;
+            /** @private */
+            private var _scale           :Number;
+            /** @private */
+            private var _rotate          :Number;
+            /** @private */
+            private var _lightness       :Number;
+            /** @private */
+            private var _panDV           :Number;
+            /** 実行環境判別フラグ (Windows) */
+            protected var isWin         :Boolean;
+            /** 実行環境判別フラグ (Mac OS) */
+            protected var isMac         :Boolean;
+            /** 画像用ローダー */
+            public var loader            :Loader;
+            /** @inheritDoc */
+            protected override function createChildren() : void {
+                super.createChildren();
+                isWin = CapabilitiesUtil.isWin;
+                isMac = CapabilitiesUtil.isMac;
+                loader = targetImage.addChild( new Loader() ) as Loader;
+                loader.contentLoaderInfo.addEventListener(Event.COMPLETE, contentLoaderInfoCompleteHandler, false, 0, true);
+            }
+            /** 画像用ローダーの読み込み完了処理 */
+            protected function contentLoaderInfoCompleteHandler(event:Event):void {
+                var dx_         :Number;
+                var dy_         :Number;
+                var loaderInfo_ :LoaderInfo;
+
+                loaderInfo_ = event.currentTarget as LoaderInfo;
+                loaderInfo_.removeEventListener(event.type, arguments.callee);
+
+                width  = _width  = loaderInfo_.width;
+                height = _height = loaderInfo_.height;
+
+                _scale     = 1;
+                _rotate    = 0;
+                _lightness = 0;
+                _panDV     = 0;
+
+                dx_ = _width  * 0.5;
+                dy_ = _height * 0.5;
+
+                loader.x = dx_;
+                loader.y = dy_;
+
+                loader.content.x = -dx_;
+                loader.content.y = -dy_;
+
+                nativeWindow.addEventListener(NativeWindowBoundsEvent.RESIZE, resizeHandler, false, 0, true);
+
+                addEventListener(Event.CLOSE, closeHandler, false, 0, true);
+                addEventListener(MouseEvent.ROLL_OVER, rollOverHandler, false, 0, true);
+                addEventListener(TransformGestureEvent.GESTURE_ZOOM,   gestureZoomHandler,   false, 0, true);
+                addEventListener(TransformGestureEvent.GESTURE_ROTATE, gestureRotateHandler, false, 0, true);
+                addEventListener(TransformGestureEvent.GESTURE_PAN,    gesturePanHandler,    false, 0, true);
+                addEventListener(TransformGestureEvent.GESTURE_SWIPE,  gestureSwipeHandler,  false, 0, true);
+
+                updateRotationLabel();
+                updateScaleLabel();
+                updateLightnessLabel();
+            }
+            /** ウィンドウクローズ処理  */
+            protected function closeHandler(event:Event):void {
+                targetImage.removeChild(loader);
+                loader = null;
+                nativeWindow.removeEventListener(NativeWindowBoundsEvent.RESIZE, resizeHandler, false);
+                removeEventListener(Event.CLOSE, closeHandler, false);
+                removeEventListener(MouseEvent.ROLL_OVER, rollOverHandler, false);
+                removeEventListener(TransformGestureEvent.GESTURE_ZOOM,   gestureZoomHandler,   false);
+                removeEventListener(TransformGestureEvent.GESTURE_ROTATE, gestureRotateHandler, false);
+                removeEventListener(TransformGestureEvent.GESTURE_PAN,    gesturePanHandler,    false);
+                removeEventListener(TransformGestureEvent.GESTURE_SWIPE,  gestureSwipeHandler,  false);
+            }
+            /** 画像の角度ラベル更新処理 */
+            protected function updateRotationLabel():void {
+                rotationLabel.text = "Rotation  : " + String(_rotate % 360);
+            }
+            /** 画像の倍率ラベル更新処理 */
+            protected function updateScaleLabel():void {
+                scaleLabel.text = "Scale     : " + String(_scale);
+            }
+            /** 画像の明度ラベル更新処理 */
+            protected function updateLightnessLabel():void {
+                lightnessLabel.text = "Lightness : " + String(_lightness);
+            }
+            /** ウィンドウのリサイズ処理 */
+            protected function resizeHandler(event:NativeWindowBoundsEvent):void {
+                var dx_:Number = targetImage.width  * 0.5;
+                var dy_:Number = targetImage.height * 0.5;
+                loader.x = dx_;
+                loader.y = dy_;
+            }
+            /** ウィンドウのロールオーバー処理 */
+            protected function rollOverHandler(event:MouseEvent):void {
+                scaleLabel.setVisible(true, true);
+                rotationLabel.setVisible(true, true);
+                lightnessLabel.setVisible(true, true);
+                resetRotationButton.setVisible(true, true);
+                resetScaleButton.setVisible(true, true);
+                resetLightnessButton.setVisible(true, true);
+                addEventListener(MouseEvent.ROLL_OUT, rollOutHandler, false, 0, true);
+            }
+            /** ウィンドウのロールアウト処理 */
+            protected function rollOutHandler(event:MouseEvent):void {
+                scaleLabel.setVisible(false, true);
+                rotationLabel.setVisible(false, true);
+                lightnessLabel.setVisible(false, true);
+                resetRotationButton.setVisible(false, true);
+                resetScaleButton.setVisible(false, true);
+                resetLightnessButton.setVisible(false, true);
+                removeEventListener(event.type, arguments.callee);
+            }
+            /** 回転ジェスチャー処理 */
+            protected function gestureRotateHandler(event:TransformGestureEvent):void {
+                updateRotation(event.rotation);
+            }
+            /** ズームジェスチャー処理 */
+            protected function gestureZoomHandler(event:TransformGestureEvent):void {
+                updateScale(event.scaleX);
+            }
+            /** パンジェスチャー処理 */
+            protected function gesturePanHandler(event:TransformGestureEvent):void {
+                if(isMac) {
+                    updateScale(1 + (event.offsetX * 0.01) );
+                    if(event.commandKey) {
+                        setGesturePanValue(event.offsetY, event.phase);
+                    }
+                    else {
+                        updateRotation(event.offsetY);
+                    }
+                }
+                else {
+                    setGesturePanValue(event.localX, event.phase);
+                }
+            }
+            /** スワイプジェスチャー処理 */
+            protected function gestureSwipeHandler(event:TransformGestureEvent):void {
+                if(isMac) {
+                    _lightness += event.offsetX * 0.2;
+                    updateLightness();
+                }
+            }
+            /** パンジェスチャーのフェーズを確認して、明度更新処理を行う */
+            protected function setGesturePanValue(dv:Number, phase:String):void {
+                switch (phase) {
+                    case GesturePhase.BEGIN  :
+                        _panDV = dv;
+                        break;
+                    case GesturePhase.UPDATE :
+                        _lightness += (dv - _panDV) / width * 0.5;
+                        updateLightness();
+                        break;
+                }
+            }
+            /** 角度更新処理 */
+            protected function updateRotation(da:Number):void {
+                _rotate += da;
+                loader.rotation = _rotate;
+                _rotate = ( _rotate < 0 ) ? _rotate + 360 : _rotate;
+                updateRotationLabel();
+            }
+            /** 倍率更新処理 */
+            protected function updateScale(dv:Number):void {
+                var minScale_:Number = 0.3;
+                var maxScale_:Number = 2;
+                _scale *= dv;
+                if(_scale < minScale_ ) {
+                    _scale = minScale_;
+                }
+                else if(_scale > maxScale_ ) {
+                    _scale = maxScale_;
+                }
+                loader.scaleX = loader.scaleY = _scale;
+
+                updateScaleLabel();
+            }
+            /** 明度更新処理 */
+            protected function updateLightness():void {
+                var colorTransform:ColorTransform = new ColorTransform();
+                var d:Number;
+                if(_lightness < -1) {
+                    _lightness = -1;
+                }
+                else if(_lightness > 1) {
+                    _lightness = 1;
+                }
+
+                if(_lightness < 0) {
+                    d = 1 + _lightness;
+                    colorTransform.redMultiplier   = d;
+                    colorTransform.greenMultiplier = d;
+                    colorTransform.blueMultiplier  = d;
+                }
+                else {
+                    d = 1 - _lightness;
+                    colorTransform.redMultiplier   = d;
+                    colorTransform.greenMultiplier = d;
+                    colorTransform.blueMultiplier  = d;
+                    colorTransform.redOffset       = _lightness * 255;
+                    colorTransform.greenOffset     = _lightness * 255;
+                    colorTransform.blueOffset      = _lightness * 255;
+                }
+                loader.content.transform.colorTransform = colorTransform;
+                updateLightnessLabel();
+            }
+            /** 角度リセット処理 */
+            protected function resetRotation():void {
+                _rotate = 0;
+                loader.rotation = _rotate;
+                updateRotationLabel();
+            }
+            /** 倍率リセット処理 */
+            protected function resetScale():void {
+                _scale = 1;
+                loader.scaleX = loader.scaleY = _scale;
+                updateScaleLabel();
+            }
+            /** 明度リセット処理 */
+            protected function resetLightness():void {
+                _lightness = 0;
+                loader.content.transform.colorTransform = new ColorTransform();
+                updateLightnessLabel();
+            }
+        ]]>
+    </fx:Script>
+
+    <mx:Image id="targetImage" width="100%" height="100%" maintainAspectRatio="true" />
+
+    <s:Label id="scaleLabel"     filters="{FILTERS}" visible="false" styleName="scaleLabel"     />
+    <s:Label id="rotationLabel"  filters="{FILTERS}" visible="false" styleName="rotationLabel"  />
+    <s:Label id="lightnessLabel" filters="{FILTERS}" visible="false" styleName="lightnessLabel" />
+
+    <s:Button id="resetScaleButton"     width="120" height="20" visible="false" styleName="scaleButtonLabel"     label="Reset Scale"     click="resetScale()"     />
+    <s:Button id="resetRotationButton"  width="120" height="20" visible="false" styleName="rotationButtonLabel"  label="Reset Rotation"  click="resetRotation()"  />
+    <s:Button id="resetLightnessButton" width="120" height="20" visible="false" styleName="lightnessButtonLabel" label="Reset Lightness" click="resetLightness()" />
+
+</s:Window>

@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!---
+
+Touch Viewer
+
+@author Copyright (c) 2009-2010 taiga.jp.
+@version 1.2
+
+Developed by taiga
+@see http://taiga.jp/
+
+Touch Viewer is (c) 2009-2010 taiga.jp and is released under the MIT License:
+http://www.opensource.org/licenses/mit-license.php
+
+-->
+<s:WindowedApplication
+    xmlns:fx            = "http://ns.adobe.com/mxml/2009"
+    xmlns:s             = "library://ns.adobe.com/flex/spark"
+    xmlns:mx            = "library://ns.adobe.com/flex/mx"
+    xmlns:control       = "jp.taiga.control.*"
+    width               = "440"
+    height.dafaultState = "32"
+    height.expandState  = "550"
+    showStatusBar       = "false"
+    backgroundAlpha     = "0"
+    backgroundColor     = "0"
+    close               = "closeHandler()"
+>
+
+    <fx:Style source="asset/css/mxTypeSelector.css" />
+    <fx:Style source="asset/css/sparkTypeSelector.css" />
+    <fx:Style source="asset/css/sparkClassSelector.css" />
+
+    <fx:Script>
+        <![CDATA[
+            import flash.desktop.*;
+            import flash.filesystem.*;
+
+            import jp.taiga.control.renderer.ImageTileListRenderer;
+            import jp.taiga.control.window.ImageWindow;
+            import jp.taiga.event.ListSelectEvent;
+
+            import mx.collections.ArrayCollection;
+            import mx.events.EffectEvent;
+            import mx.events.FlexEvent;
+
+            import spark.components.*;
+
+            /** 本アプリケーションで取り扱うファイルタイプ */
+            protected static const FILE_TYPE :RegExp = /(\.gif|\.jpg|\.png)$/;
+            /** 画像一覧データ */
+            protected var listData           :ArrayCollection;
+            /** ネイティブウィンドウインスタンス */
+            protected var _window            :ImageWindow;
+            /** 選択した画像一覧のルートディレクトリ */
+            protected var selectedDirectory  :File;
+            /** 選択した画像ファイル */
+            protected var selectedFile       :File;
+            /** @inheritDoc */
+            protected override function createChildren() : void {
+                super.createChildren();
+
+                Multitouch.inputMode = MultitouchInputMode.GESTURE;
+
+                var svi:StorageVolumeInfo;
+                svi = StorageVolumeInfo.storageVolumeInfo;
+                svi.addEventListener(StorageVolumeChangeEvent.STORAGE_VOLUME_MOUNT,   storageVolumeMountHandler,   false, 0, true);
+                svi.addEventListener(StorageVolumeChangeEvent.STORAGE_VOLUME_UNMOUNT, storageVolumeUnmountHandler, false, 0, true);
+
+                listData = new ArrayCollection();
+                fileList.dataProvider = listData;
+                fileList.addEventListener(ListSelectEvent.IMAGE_SELECTING, fileListImageSelectingHandler);
+                fileList.addEventListener(ListSelectEvent.IMAGE_SELECTED, fileListImageSelectedHandler);
+
+                applicationPanel.titleDisplay.addEventListener(MouseEvent.MOUSE_DOWN, titleDisplayDownHandler);
+
+            }
+            /** アプリケーション終了時の処理 */
+            protected function closeHandler():void {
+                var i  :int;
+                var l  :int;
+                var nw :NativeWindow;
+                l = nativeApplication.openedWindows.length;
+                for(i = 0; i < l; i++) {
+                    nw = nativeApplication.openedWindows[i] as NativeWindow;
+                    nw.close();
+                }
+            }
+            /** USB ストレージのマウント処理 */
+            protected function storageVolumeMountHandler(event:StorageVolumeChangeEvent):void {
+                if(event.rootDirectory != null) {
+                    selectedDirectory = event.rootDirectory;
+                    currentState = "expandState";
+                }
+            }
+            /** USB ストレージのアンマウント処理 */
+            protected function storageVolumeUnmountHandler(event:StorageVolumeChangeEvent):void {
+                currentState = "dafaultState";
+            }
+            /** ディレクトリをブラウズする処理 */
+            protected function openDirectory():void {
+                selectedDirectory = new File();
+                selectedDirectory.addEventListener(Event.SELECT, selectedDirectorySelectHandler, false, 0, true);
+                selectedDirectory.browseForDirectory("Select a image directory.");
+            }
+            /** ディレクトリ選択処理 */
+            protected function selectedDirectorySelectHandler(event:Event):void {
+                selectedDirectory.removeEventListener(event.type, arguments.callee);
+                changeExpandState();
+            }
+            /** ステート変更 (expandState) */
+            protected function changeExpandState():void {
+                currentState = "expandState";
+            }
+            /** ステート変更 (dafaultState) */
+            protected function changeDefaultState():void {
+                currentState = "dafaultState";
+            }
+            /** expandState 変更完了処理 ( setFileData() を遅延実行 )  */
+            protected function expandEffectEndHandler(event:EffectEvent):void {
+                callLater(setFileData, [selectedDirectory]);
+            }
+            /** dafaultState 変更完了処理  */
+            protected function dafaultEffectEndHandler(event:EffectEvent):void {
+                listData.removeAll();
+            }
+            /** 選択ディレクトリ内の画像ファイルをリストに表示 */
+            protected function setFileData(f:File):void {
+                var a :Array = f.getDirectoryListing();
+                var i :int;
+                var l :int = a.length;
+                var f :File;
+                for(i = 0; i < l; i++) {
+                    f = a[i] as File;
+                    if(f.name.toLowerCase().match(FILE_TYPE)) {
+                        listData.addItem(f);
+                    }
+                }
+            }
+            /** アプリケーション終了ボタン処理 */
+            protected function closeButtonClickHandler():void {
+                nativeWindow.close();
+            }
+            /** アプリケーションのヘッダのマウスダウン処理 */
+            protected function titleDisplayDownHandler(event:MouseEvent):void {
+                nativeWindow.startMove();
+            }
+            /** リストのレンダラー選択開始処理 */
+            protected function fileListImageSelectingHandler(event:Event):void {
+                defaultStateButton.enabled = false;
+            }
+            /** リストのレンダラー選択完了処理 */
+            protected function fileListImageSelectedHandler(event:Event):void {
+                defaultStateButton.enabled = true;
+                var renderer:ImageTileListRenderer = event.target as ImageTileListRenderer;
+                selectedFile = renderer.data as File;
+                callAIRImageView();
+            }
+            /** 新規 AIR Window と画像表示処理 */
+            protected function callAIRImageView():void {
+                _window = new ImageWindow();
+                _window.addEventListener(Event.CLOSE,
+                    function(event:Event):void {
+                        _window.removeEventListener(event.type, arguments.callee);
+                        _window = null;
+                    }, false, 0, true
+                );
+                _window.addEventListener(FlexEvent.CREATION_COMPLETE,
+                    function(event:FlexEvent):void {
+                        var fs:FileStream = new FileStream();
+                        var ba:ByteArray  = new ByteArray();
+                        try {
+                            fs.open(selectedFile, FileMode.READ);
+                            fs.readBytes(ba);
+                        }
+                        catch ( e:Error ) {
+                        }
+                        finally {
+                            fs.close();
+                        }
+                        _window.loader.loadBytes(ba);
+                        _window.removeEventListener(event.type, arguments.callee);
+                        _window.title = selectedFile.name;
+                    }, false, 0, true
+                );
+                _window.open();
+            }
+        ]]>
+    </fx:Script>
+
+    <fx:Declarations>
+        <s:Bounce id="bounce" />
+    </fx:Declarations>
+
+    <s:states>
+        <s:State name="dafaultState" />
+        <s:State name="expandState" />
+    </s:states>
+
+    <s:transitions>
+        <s:Transition fromState="dafaultState" toState="expandState">
+            <s:Parallel duration="500" effectEnd="expandEffectEndHandler(event)">
+                <s:Resize targets="{[this, applicationPanel]}" easer="{bounce}" />
+            </s:Parallel>
+        </s:Transition>
+        <s:Transition fromState="expandState" toState="dafaultState">
+            <s:Parallel duration="500" effectEnd="dafaultEffectEndHandler(event)">
+                <s:Resize targets="{[this, applicationPanel]}" easer="{bounce}" />
+            </s:Parallel>
+        </s:Transition>
+    </s:transitions>
+
+    <s:Panel id="applicationPanel" width="440" height.dafaultState = "32" height.expandState  = "550" title="Touch Viewer">
+
+        <s:layout>
+            <s:VerticalLayout />
+        </s:layout>
+
+        <s:List
+            id                     = "fileList"
+            width                  = "100%"
+            height                 = "100%"
+            contentBackgroundColor = "#333333"
+            itemRenderer           = "jp.taiga.control.renderer.ImageTileListRenderer"
+            borderVisible          = "false"
+            selectionColor         = "#ffffff"
+            includeIn              = "expandState"
+            itemCreationPolicy     = "immediate"
+        >
+            <s:layout>
+                <s:TileLayout id="tileLayout" />
+            </s:layout>
+        </s:List>
+
+    </s:Panel>
+
+    <s:Button id="closeButton"        width="40"  height="20" label="×"     styleName="closeButton" click="closeButtonClickHandler()" />
+    <s:Button id="browseButton"       width="100" height="20" label="open"  styleName="stateButton" includeIn="dafaultState" click="openDirectory()" />
+    <s:Button id="defaultStateButton" width="100" height="20" label="close" styleName="stateButton" includeIn="expandState"  click="changeDefaultState()" />
+
+</s:WindowedApplication>
